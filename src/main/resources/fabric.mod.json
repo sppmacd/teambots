@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "id": "pumpkin_farm_utility",
+  "id": "teambots",
   "version": "${version}",
 
-  "name": "PumpkinCell Farm Utility",
-  "description": "Various utilities for farm building",
+  "name": "Teambots",
+  "description": "Various commands for nations.minecraft.best server",
   "authors": [
-    "Me!"
+    "sppmacd"
   ],
   "contact": {
-    "homepage": "",
-    "sources": ""
+    "homepage": "https://github.com/sppmacd/teambots",
+    "sources": "https://github.com/sppmacd/teambots"
   },
 
   "license": "CC0-1.0",
