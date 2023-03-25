@@ -2,17 +2,17 @@
 
 A FabricMC mod adding various commands for `nations.minecraft.best` server.
 
-This is currently only for Minecraft 1.19.2.
+This is currently tested only on Minecraft 1.19.2.
 
 ## Commands
 
 ### `/bot` - Carpet bot management
 
-This command can be used to spawn and kill Carpet bots. They behave like normal players, so can be used e.g. for farm
-AFK-ing.
+This command can be used to spawn and kill Carpet bots. They behave like normal players, so can be used for things like
+farm AFK-ing.
 
-For now, only a single bot per nation is allowed. Only players that belong to a nation can use this command, but they
-don't need to be a leader.
+For now, only a single bot per nation is allowed. Only players who belong to a nation can use this command, but they do
+not have to be a leader.
 
 - `/bot set <coords>` - Spawn a new bot at `coords` or teleport an existing bot. `coords` must be at most 5 blocks away
   from you.
@@ -20,9 +20,9 @@ don't need to be a leader.
 
 ### `/nation` - Nation management
 
-`/nation` command can be used by players and admins to create, join and manage nations. It uses vanilla teams for this,
-so that you can remove and modify nations using `/team` command. The only non-vanilla feature added are leaders, which
-can be managed with `/nation admin`.
+The `/nation` command can be used by players and admins to create, join and manage nations. It uses vanilla teams for
+this, so that you can remove and modify nations using the `/team` command. The only non-vanilla feature added is
+leaders, which can be managed using `/nation admin`.
 
 - `/nation add <player>` - add new player to a nation (as a leader) 
 - `/nation create <name> <color>` - create a new nation and become its leader
