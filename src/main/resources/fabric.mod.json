@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "pumpkin_farm_utility",
+  "version": "${version}",
+
+  "name": "PumpkinCell Farm Utility",
+  "description": "Various utilities for farm building",
+  "authors": [
+    "Me!"
+  ],
+  "contact": {
+    "homepage": "",
+    "sources": ""
+  },
+
+  "license": "CC0-1.0",
+  "icon": "assets/teambots/icon.png",
+
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "net.pumpkincell.teambots.TeamBotsMod"
+    ]
+  },
+  "mixins": [
+    "teambots.mixins.json"
+  ],
+
+  "depends": {
+    "fabricloader": ">=0.14.9",
+    "fabric-api": ">=0.67.1",
+    "minecraft": "~1.19",
+    "java": ">=17",
+    "carpet": ">=1.4.84"
+  }
+}
