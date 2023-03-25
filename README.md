@@ -26,8 +26,10 @@ can be managed with `/nation admin`.
 
 - `/nation add <player>` - add new player to a nation (as a leader) 
 - `/nation create <name> <color>` - create a new nation and become its leader
+- `/nation kick <player>` - kick a player from your nation (as a leader)
 - `/nation leave` - leave a nation. Possible only if you are not its leader
 - `/nation list` - display nations and their members
+- `/nation remove` - remove your nation (as a leader; you need to kick all the members first)
 - `/nation admin` - OP commands for managing nations
   - `/nation admin setleader <team> <leader>` - set nation leader
   - `/nation admin clearleader <team>` - remove nation leader, should be done before `/team remove`.

@@ -38,6 +38,27 @@ public class NationCommand {
         return 0;
     }
 
+    private static int handleNationRemove(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        var source = context.getSource();
+        var player = source.getPlayer();
+
+        TeamBotsMod.requireIsNationLeader(source);
+
+        assert player != null;
+        var team = (Team)player.getScoreboardTeam();
+        assert team != null;
+
+        if (team.getPlayerList().size() > 1) {
+            throw new CommandException(Text.literal("Kick all other members first"));
+        }
+
+        var state = ServerState.load(Objects.requireNonNull(player.getServer()));
+        state.clearLeader(team.getName());
+        player.getScoreboard().removeTeam(team);
+        source.sendFeedback(Text.literal("Successfully removed the nation"), false);
+        return 0;
+    }
+
     private static int handleNationCreate(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         var name = StringArgumentType.getString(context, "name");
         var color = ColorArgumentType.getColor(context, "color");
@@ -108,10 +129,63 @@ public class NationCommand {
                 var addedPlayerEntity = source.getServer().getPlayerManager().getPlayer(addedPlayer.getId());
                 var addedPlayerName = addedPlayerEntity == null ? Text.literal(addedPlayer.getName()) : addedPlayerEntity.getDisplayName();
                 if (teammateEntity != null) {
-                    teammateEntity.sendMessageToClient(addedPlayerName.copy()
-                        .append(", joined our nation. Welcome!"), true);
+                    if (playersToAdd.contains(teammateEntity.getGameProfile())) {
+                        teammateEntity.sendMessageToClient(Text.literal(String.format("∙ You have been added to %s.", team.getName())).formatted(Formatting.ITALIC), false);
+                    } else {
+                        teammateEntity.sendMessageToClient(Text.literal("∙ ").formatted(Formatting.ITALIC)
+                            .append(addedPlayerName.copy())
+                            .append(Text.literal(" has joined our nation. Welcome!").formatted(Formatting.RESET, Formatting.ITALIC)), false);
+                    }
                 }
             }
+        }
+        return 0;
+    }
+
+    private static int handleNationKick(CommandContext<ServerCommandSource> context, String reason) throws CommandSyntaxException {
+        var playersToKick = GameProfileArgumentType.getProfileArgument(context, "player");
+        var source = context.getSource();
+        var player = source.getPlayer();
+
+        TeamBotsMod.requireIsNationLeader(source);
+
+        assert player != null;
+        var team = (Team)player.getScoreboardTeam();
+
+        assert team != null;
+        for (var playerToKick : playersToKick) {
+            if (playerToKick.getId().equals(player.getGameProfile().getId())) {
+                throw new CommandException(Text.literal("Refusing to kick yourself."));
+            }
+            if (source.getServer().getScoreboard().getPlayerTeam(playerToKick.getName()) != team) {
+                throw new CommandException(Text.literal("Can't kick player from another nation"));
+            }
+        }
+        for (var playerToKick : playersToKick) {
+            player.getScoreboard().removePlayerFromTeam(playerToKick.getName(), team);
+        }
+
+        if (playersToKick.size() == 1) {
+            source.sendFeedback(Text.literal("Successfully kicked ")
+                .append(Text.literal(playersToKick.stream().findFirst().get().getName())
+                    .formatted(Formatting.BOLD)).append(" from your nation"), false);
+        } else {
+            source.sendFeedback(Text.literal(String.format("Successfully kicked %d players from your nation",
+                playersToKick.size())), false);
+        }
+        for (var kickedPlayer : playersToKick) {
+            var kickedPlayerEntity = source.getServer().getPlayerManager().getPlayer(kickedPlayer.getId());
+            for (var teammate: team.getPlayerList()) {
+                var teammateEntity = source.getServer().getPlayerManager().getPlayer(teammate);
+                var kickedPlayerName = kickedPlayerEntity == null ? Text.literal(kickedPlayer.getName()) : kickedPlayerEntity.getDisplayName();
+                if (teammateEntity != null) {
+                    teammateEntity.sendMessageToClient(Text.literal("∙ ").formatted(Formatting.ITALIC)
+                        .append(kickedPlayerName.copy())
+                        .append(Text.literal(String.format(" has been kicked from our nation. Reason: %s", reason))), false);
+                }
+            }
+            kickedPlayerEntity.sendMessageToClient(Text.literal(String.format("∙ You have been kicked from %s. Reason: %s",
+                team.getName(), reason)).formatted(Formatting.ITALIC), false);
         }
         return 0;
     }
@@ -203,6 +277,8 @@ public class NationCommand {
             .requires(ServerCommandSource::isExecutedByPlayer)
             .then(CommandManager.literal("leave")
                 .executes(NationCommand::handleNationLeave))
+            .then(CommandManager.literal("remove")
+                .executes(NationCommand::handleNationRemove))
             .then(CommandManager.literal("create")
                 .then(CommandManager.argument("name", StringArgumentType.string())
                     .then(CommandManager.argument("color", ColorArgumentType.color())
@@ -213,6 +289,14 @@ public class NationCommand {
             .then(CommandManager.literal("add")
                 .then(CommandManager.argument("player", GameProfileArgumentType.gameProfile())
                     .executes(NationCommand::handleNationAdd)
+                )
+            )
+            .then(CommandManager.literal("kick")
+                .then(CommandManager.argument("player", GameProfileArgumentType.gameProfile())
+                    .executes((context) -> handleNationKick(context, "Just because"))
+                    .then(CommandManager.argument("reason", StringArgumentType.greedyString())
+                        .executes((context) -> handleNationKick(context, StringArgumentType.getString(context, "reason")))
+                    )
                 )
             )
             .then(CommandManager.literal("list").executes(NationCommand::handleNationList))
