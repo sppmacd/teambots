@@ -10,6 +10,7 @@ import net.minecraft.scoreboard.Team;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameMode;
 import net.pumpkincell.teambots.TeamBotsMod;
 
@@ -19,16 +20,15 @@ public class BotCommand {
             .requires(ServerCommandSource::isExecutedByPlayer)
             .then(CommandManager.literal("set")
                 .then(CommandManager.argument("coords", Vec3ArgumentType.vec3())
-                    .executes(BotCommand::handleBotSet)
+                    .executes(context -> handleBotSet(context, Vec3ArgumentType.getVec3(context, "coords")))
                 )
-                .executes(BotCommand::handleBotSet)
+                .executes(context -> handleBotSet(context, context.getSource().getPosition()))
             )
             .then(CommandManager.literal("remove").executes(BotCommand::handleBotRemove))
         );
     }
 
-    private static int handleBotSet(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        var coords = Vec3ArgumentType.getVec3(context, "coords");
+    private static int handleBotSet(CommandContext<ServerCommandSource> context, Vec3d coords) throws CommandSyntaxException {
         var source = context.getSource();
 
         TeamBotsMod.requireIsInNation(source);
