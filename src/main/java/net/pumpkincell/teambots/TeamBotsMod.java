@@ -6,16 +6,22 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.SharedConstants;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
+import net.minecraft.util.Hand;
 import net.pumpkincell.teambots.commands.BotCommand;
 import net.pumpkincell.teambots.commands.NationCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.event.ItemEvent;
+import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -32,6 +38,16 @@ public class TeamBotsMod implements ModInitializer {
     public static final SimpleCommandExceptionType NOT_IN_NATION = new SimpleCommandExceptionType(Text.literal("You need to be in a nation to run this command"));
     public static final SimpleCommandExceptionType NOT_NATION_LEADER = new SimpleCommandExceptionType(Text.literal("You need to be a nation's leader to run this command"));
     public static final SimpleCommandExceptionType ALREADY_IN_NATION = new SimpleCommandExceptionType(Text.literal("You are already in a nation"));
+
+    public static Config config;
+
+    static {
+        try {
+            config = Config.load();
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private static boolean isInNation(ServerCommandSource source) {
         var player = source.getPlayer();
@@ -90,5 +106,19 @@ public class TeamBotsMod implements ModInitializer {
             BotCommand.register(dispatcher);
             NationCommand.register(dispatcher);
         });
+
+        ServerTickEvents.END_SERVER_TICK.register((server) -> {
+            if (server.getTicks() % 20 != 0) {
+                return;
+            }
+            var timeLeft = config.getTimeLeftToEndOpeningMS() / 1000 + 1;
+            if (timeLeft < 0 || timeLeft > 3600) {
+                return;
+            }
+            var timeLeftFormatted = String.format("%d:%02d", timeLeft / 60, timeLeft % 60);
+            server.getPlayerManager().broadcast(Text.literal(String.format("The End opens in %s", timeLeftFormatted)), true);
+        });
+
+
     }
 }
