@@ -1,19 +1,15 @@
 package net.pumpkincell.teambots.inbox;
 
-import net.fabricmc.fabric.api.event.registry.FabricRegistryBuilder;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.ClickEvent;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.SimpleRegistry;
 import net.pumpkincell.teambots.TeamBotsMod;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -24,8 +20,8 @@ import java.util.Map;
 public class Inbox {
     private static final Logger LOGGER = TeamBotsMod.LOGGER;
 
-    private final List<Message> messages = new LinkedList<>();
-    private final Map<Long, Message> messagesById = new HashMap<>();
+    private final List<Message> storedMessages = new LinkedList<>();
+    private final Map<Long, Message> messagesWithPendingAction = new HashMap<>();
     private long lastId = 0;
 
     private ServerPlayerEntity player;
@@ -42,6 +38,7 @@ public class Inbox {
         var type = tag.getString("type");
         switch (type) {
             case "text" -> pushMessage(new TextMessage(tag));
+            case "nation_invite" -> pushMessage(new NationInviteMessage(tag));
         }
     }
 
@@ -49,7 +46,7 @@ public class Inbox {
         var tag = new NbtCompound();
 
         var messages = new NbtList();
-        for (var message : this.messages) {
+        for (var message : this.storedMessages) {
             messages.add(message.toNbt());
         }
         tag.put("messages", messages);
@@ -67,38 +64,50 @@ public class Inbox {
 
     public void pushMessage(Message message) {
         LOGGER.info("{}", message);
-        if (this.player != null) {
-            this.sendMessage(message);
-            return;
-        }
 
         if (message.id == 0) {
             message.id = ++this.lastId;
         }
-        this.messages.add(message);
-        this.messagesById.put(message.id, message);
+        if (this.player != null) {
+            this.sendMessage(message);
+        } else {
+            this.storedMessages.add(message);
+        }
     }
 
     private void sendMessage(Message message) {
         assert this.player != null;
-        this.player.sendMessage(Text.literal("∙ ").formatted(Formatting.AQUA).append(message.format()));
+        var chatMsg = Text.literal("∙ ").formatted(Formatting.GOLD).append(message.format(this.player.server));
+
+        var actions = message.getActions();
+        if (!actions.isEmpty()) {
+            for (var action : actions) {
+                var command = String.format("/~inbox clickevent %s %s", message.id, action);
+                chatMsg.append(Text.literal(" "));
+                chatMsg.append(Text.literal(action).formatted(Formatting.AQUA, Formatting.UNDERLINE)
+                    .styled(s -> s.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))));
+            }
+        }
+
+        this.messagesWithPendingAction.put(message.id, message);
+        this.player.sendMessage(chatMsg);
     }
 
     // Send the Inbox as a chat messages.
     private void flush() {
         assert this.player != null;
-        for (var message : this.messages) {
+        for (var message : this.storedMessages) {
             this.sendMessage(message);
         }
-        this.messages.clear();
-        this.messagesById.clear();
+        this.storedMessages.clear();
     }
 
-    public void handleClickEventCommand(long msgid, String action) {
-        var msg = this.messagesById.get(msgid);
+    public void handleClickEventCommand(ServerPlayerEntity entity, long msgid, String action) {
+        var msg = this.messagesWithPendingAction.get(msgid);
         if (msg == null) {
-            throw new IllegalArgumentException("Invalid message id");
+            return;
         }
-        msg.handleClickEvent(action);
+        msg.handleAction(entity, action);
+        this.messagesWithPendingAction.remove(msgid);
     }
 }

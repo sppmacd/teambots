@@ -1,6 +1,8 @@
 package net.pumpkincell.teambots.inbox;
 
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 
 import java.util.HashSet;
@@ -22,12 +24,14 @@ public abstract class Message {
         return tag;
     }
 
-    abstract Text format();
+    abstract Text format(MinecraftServer server);
 
-    // Get a list of possible actions
-    Set<String> getActions() { return new HashSet<>(); }
+    // Get a list of possible clickable actions.
+    Set<String> getActions() {
+        return new HashSet<>();
+    }
 
-    void handleClickEvent(String action) {
-        // TODO
+    void handleAction(ServerPlayerEntity player, String action) {
+
     }
 }

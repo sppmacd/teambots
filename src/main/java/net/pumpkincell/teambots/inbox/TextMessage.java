@@ -1,6 +1,7 @@
 package net.pumpkincell.teambots.inbox;
 
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.text.Text;
 
 public class TextMessage extends Message {
@@ -13,6 +14,7 @@ public class TextMessage extends Message {
 
     public NbtCompound toNbt() {
         var tag = super.toNbt();
+        tag.putString("type", "text");
         tag.putString("text", Text.Serializer.toJson(this.text));
         return tag;
     }
@@ -22,7 +24,7 @@ public class TextMessage extends Message {
     }
 
     @Override
-    public Text format() {
+    public Text format(MinecraftServer server) {
         return this.text;
     }
 

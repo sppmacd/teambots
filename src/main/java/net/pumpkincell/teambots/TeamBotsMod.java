@@ -1,6 +1,8 @@
 package net.pumpkincell.teambots;
 
 import carpet.patches.EntityPlayerMPFake;
+import com.mojang.brigadier.arguments.LongArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.fabricmc.api.ModInitializer;
@@ -9,6 +11,7 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.SharedConstants;
+import net.minecraft.command.CommandException;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.server.command.CommandManager;
@@ -16,7 +19,6 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.pumpkincell.teambots.commands.BotCommand;
 import net.pumpkincell.teambots.commands.NationCommand;
-import net.pumpkincell.teambots.inbox.Inbox;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,7 +101,8 @@ public class TeamBotsMod implements ModInitializer {
             DateFormat df = DateFormat.getDateInstance(DateFormat.LONG, Locale.getDefault());
             String formattedDate = df.format(config.getEndOpeningTimeMS());
             return String.format("The End is opening %s, in %s", formattedDate,
-                DurationFormatUtils.formatDurationWords(timeLeft, true, true));
+                DurationFormatUtils.formatDurationWords(timeLeft, true, true)
+            );
         }
         return String.format("The End is opening in %s", DurationFormatUtils.formatDurationHMS(timeLeft));
     }
@@ -131,10 +134,34 @@ public class TeamBotsMod implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             BotCommand.register(dispatcher);
             NationCommand.register(dispatcher);
+
             dispatcher.register(CommandManager.literal("endopening").executes((ctx) -> {
                 ctx.getSource().sendFeedback(Text.literal(formatTheEndOpeningTime(true)), false);
                 return 0;
             }));
+            dispatcher.register(CommandManager.literal("~inbox")
+                .then(CommandManager.literal("clickevent")
+                    .then(CommandManager.argument("msgid", LongArgumentType.longArg())
+                        .then(CommandManager.argument("action", StringArgumentType.greedyString())
+                            .executes((ctx) -> {
+                                var player = ctx.getSource().getPlayerOrThrow();
+                                var uuid = player.getGameProfile().getId();
+
+                                var msgid = LongArgumentType.getLong(ctx, "msgid");
+                                var action = StringArgumentType.getString(ctx, "action");
+
+                                try {
+                                    ServerState.load(ctx.getSource().getServer()).getInbox(uuid)
+                                        .handleClickEventCommand(player, msgid, action);
+                                } catch (Exception e) {
+                                    throw new CommandException(Text.literal(e.getMessage()));
+                                }
+                                return 0;
+                            })
+                        )
+                    )
+                )
+            );
         });
 
         // End opening

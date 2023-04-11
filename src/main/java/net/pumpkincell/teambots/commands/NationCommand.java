@@ -1,6 +1,5 @@
 package net.pumpkincell.teambots.commands;
 
-import com.mojang.authlib.GameProfileRepository;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -19,6 +18,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.pumpkincell.teambots.ServerState;
 import net.pumpkincell.teambots.TeamBotsMod;
+import net.pumpkincell.teambots.inbox.NationInviteMessage;
 import net.pumpkincell.teambots.inbox.TextMessage;
 
 import java.util.HashMap;
@@ -113,7 +113,7 @@ public class NationCommand {
         return 0;
     }
 
-    private static int handleNationAdd(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    private static int handleNationInvite(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         var playersToAdd = GameProfileArgumentType.getProfileArgument(context, "player");
         var source = context.getSource();
         var player = source.getPlayer();
@@ -126,46 +126,22 @@ public class NationCommand {
         var team = (Team) player.getScoreboardTeam();
         assert team != null;
 
-        var playerCountInTeamAfterAdding = team.getPlayerList().size() + playersToAdd.size();
-        if (playerCountInTeamAfterAdding > 5) {
-            throw new CommandException(Text.literal(String.format("A nation may contain a maximum of 5 players, after" +
-                " adding players it would be %d", playerCountInTeamAfterAdding)));
-        }
-
         for (var player1 : playersToAdd) {
             if (source.getServer().getScoreboard().getPlayerTeam(player1.getName()) != null) {
-                throw new CommandException(Text.literal("Player you want to add is already in a nation"));
+                throw new CommandException(Text.literal("Player you want to invite is already in a nation"));
             }
         }
 
-        for (var player1 : playersToAdd) {
-            player.getScoreboard().addPlayerToTeam(player1.getName(), team);
-        }
-
         if (playersToAdd.size() == 1) {
-            source.sendFeedback(Text.literal("Successfully added ")
-                .append(Text.literal(playersToAdd.stream().findFirst().get().getName())
-                    .formatted(Formatting.BOLD)).append(" to your nation"), false);
+            source.sendFeedback(Text.literal("Sent invite to ")
+                .append(playersToAdd.stream().findFirst().get().getName()), false);
         } else {
-            source.sendFeedback(Text.literal(String.format("Successfully added %d players to your nation",
+            source.sendFeedback(Text.literal(String.format("Sent nation invite to %d players",
                 playersToAdd.size()
             )), false);
         }
         for (var addedPlayer : playersToAdd) {
-            state.getInbox(addedPlayer.getId())
-                .pushMessage(new TextMessage(Text.literal(String.format("You have been added to %s.", team.getName()))));
-
-            for (var teammate : team.getPlayerList()) {
-                var profile = source.getServer().getUserCache().findByName(teammate);
-                profile.ifPresent((v) -> {
-                    if (profile.get().getId().equals(addedPlayer.getId())) {
-                        return;
-                    }
-                    state.getInbox(profile.get().getId())
-                        .pushMessage(new TextMessage(Text.literal(String.format("%s was added to our nation. " +
-                            "Welcome!", addedPlayer.getName()))));
-                });
-            }
+            state.getInbox(addedPlayer.getId()).pushMessage(new NationInviteMessage(team.getName()));
         }
         return 0;
     }
@@ -315,50 +291,49 @@ public class NationCommand {
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(CommandManager.literal("nation")
-                .requires(ServerCommandSource::isExecutedByPlayer)
-                .then(CommandManager.literal("leave")
-                    .executes(NationCommand::handleNationLeave))
-                .then(CommandManager.literal("remove")
-                    .executes(NationCommand::handleNationRemove))
-                .then(CommandManager.literal("create")
-                    .then(CommandManager.argument("name", StringArgumentType.string())
-                        .then(CommandManager.argument("color", ColorArgumentType.color())
-                            .executes(NationCommand::handleNationCreate)
+            .requires(ServerCommandSource::isExecutedByPlayer)
+            .then(CommandManager.literal("leave")
+                .executes(NationCommand::handleNationLeave))
+            .then(CommandManager.literal("remove")
+                .executes(NationCommand::handleNationRemove))
+            .then(CommandManager.literal("create")
+                .then(CommandManager.argument("name", StringArgumentType.string())
+                    .then(CommandManager.argument("color", ColorArgumentType.color())
+                        .executes(NationCommand::handleNationCreate)
+                    )
+                )
+            )
+            .then(CommandManager.literal("invite")
+                .then(CommandManager.argument("player", GameProfileArgumentType.gameProfile())
+                    .executes(NationCommand::handleNationInvite)
+                )
+            )
+            .then(CommandManager.literal("kick")
+                .then(CommandManager.argument("player", GameProfileArgumentType.gameProfile())
+                    .executes((context) -> handleNationKick(context, "Just because"))
+                    .then(CommandManager.argument("reason", StringArgumentType.greedyString())
+                        .executes((context) -> handleNationKick(context, StringArgumentType.getString(context,
+                            "reason"
+                        )))
+                    )
+                )
+            )
+            .then(CommandManager.literal("list").executes(NationCommand::handleNationList))
+            .then(CommandManager.literal("admin")
+                .requires(source -> source.hasPermissionLevel(3))
+                .then(CommandManager.literal("setleader")
+                    .then(CommandManager.argument("team", TeamArgumentType.team())
+                        .then(CommandManager.argument("leader", GameProfileArgumentType.gameProfile())
+                            .executes(NationCommand::handleNationAdminSetLeader)
                         )
                     )
                 )
-                .then(CommandManager.literal("add")
-                    .then(CommandManager.argument("player", GameProfileArgumentType.gameProfile())
-                        .executes(NationCommand::handleNationAdd)
+                .then(CommandManager.literal("clearleader")
+                    .then(CommandManager.argument("team", TeamArgumentType.team())
+                        .executes(NationCommand::handleNationAdminClearLeader)
                     )
                 )
-                .then(CommandManager.literal("kick")
-                    .then(CommandManager.argument("player", GameProfileArgumentType.gameProfile())
-                        .executes((context) -> handleNationKick(context, "Just because"))
-                        .then(CommandManager.argument("reason", StringArgumentType.greedyString())
-                            .executes((context) -> handleNationKick(context, StringArgumentType.getString(context,
-                                "reason"
-                            )))
-                        )
-                    )
-                )
-                .then(CommandManager.literal("list").executes(NationCommand::handleNationList))
-                .then(CommandManager.literal("admin")
-                    .requires(source -> source.hasPermissionLevel(3))
-                    .then(CommandManager.literal("setleader")
-                        .then(CommandManager.argument("team", TeamArgumentType.team())
-                            .then(CommandManager.argument("leader", GameProfileArgumentType.gameProfile())
-                                .executes(NationCommand::handleNationAdminSetLeader)
-                            )
-                        )
-                    )
-                    .then(CommandManager.literal("clearleader")
-                        .then(CommandManager.argument("team", TeamArgumentType.team())
-                            .executes(NationCommand::handleNationAdminClearLeader)
-                        )
-                    )
-                )
-            // TODO: /nation kick
+            )
         );
     }
 }

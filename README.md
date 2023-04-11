@@ -4,7 +4,18 @@ A FabricMC mod adding various commands for `nations.minecraft.best` server.
 
 This is currently tested only on Minecraft 1.19.2.
 
+## Features
+
+- Faction management (called "nations" here)
+- Safely allow players to spawn Carpet bots
+- The End lock until specified time, including fancy opening
+- Inbox system, so that some system messages sent to offline players will be stored and displayed to them anyway
+
 ## Commands
+
+### `/endopening`
+
+Check when The End will be opened.
 
 ### `/bot` - Carpet bot management
 
@@ -23,21 +34,28 @@ The `/nation` command can be used by players and admins to create, join and mana
 this, so that you can remove and modify nations using the `/team` command. The only non-vanilla feature added is
 leaders, which can be managed using `/nation admin`.
 
-`/nation` commands (except `list` and `admin`) have a cooldown of 5 minutes. (TODO: make cooldown configurable)
+`/nation` commands (except `list` and `admin`) may have a cooldown configured (see [configuration](#configuration)).
 
--   `/nation add <player>` - add new player to a nation (as a leader)
+-   `/nation invite <player>` - invite new player to a nation (as a leader).
 -   `/nation create <name> <color>` - create a new nation and become its leader
 -   `/nation kick <player>` - kick a player from your nation (as a leader)
 -   `/nation leave` - leave a nation. Possible only if you are not its leader
--   `/nation list` - display nations and their members
+-   `/nation list` - display nations and their members.
 -   `/nation remove` - remove your nation (as a leader; you need to kick all the members first)
 -   `/nation admin` - OP commands for managing nations
     -   `/nation admin setleader <team> <leader>` - set nation leader
     -   `/nation admin clearleader <team>` - remove nation leader, should be done before `/team remove`.
 
-## Other features
+## Configuration
 
-- TODO: Disable The End for first 7 (real) days
+There is a configuration file at `config/teambots.json`:
+
+```json
+{
+    "endOpeningTime": "<Unix timestamp of the moment when The end will be opened for players. Default 0 - always opened>",
+    "nationCommandCooldown": "<Time players need to wait before they can use /nation command again>"
+}
+```
 
 ## Dependencies
 
