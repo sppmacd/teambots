@@ -1,13 +1,13 @@
 package net.pumpkincell.teambots;
 
 import carpet.patches.EntityPlayerMPFake;
-import com.ibm.icu.impl.duration.DurationFormatter;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.SharedConstants;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.Team;
@@ -16,13 +16,13 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.pumpkincell.teambots.commands.BotCommand;
 import net.pumpkincell.teambots.commands.NationCommand;
+import net.pumpkincell.teambots.inbox.Inbox;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.text.DateFormat;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -98,7 +98,8 @@ public class TeamBotsMod implements ModInitializer {
         if (longFormat) {
             DateFormat df = DateFormat.getDateInstance(DateFormat.LONG, Locale.getDefault());
             String formattedDate = df.format(config.getEndOpeningTimeMS());
-            return String.format("The End is opening %s, in %s", formattedDate, DurationFormatUtils.formatDurationWords(timeLeft, true, true));
+            return String.format("The End is opening %s, in %s", formattedDate,
+                DurationFormatUtils.formatDurationWords(timeLeft, true, true));
         }
         return String.format("The End is opening in %s", DurationFormatUtils.formatDurationHMS(timeLeft));
     }
@@ -107,9 +108,7 @@ public class TeamBotsMod implements ModInitializer {
     public void onInitialize() {
         SharedConstants.isDevelopment = true;
 
-        // This code runs as soon as Minecraft is in a mod-load-ready state.
-        // However, some things (like resources) may still be uninitialized.
-        // Proceed with mild caution.
+        // Bots
         ServerLivingEntityEvents.ALLOW_DEATH.register((entity, damageSource, damageAmount) -> {
             if (entity instanceof EntityPlayerMPFake) {
                 if (botsForTeam.containsValue(entity)) {
@@ -120,6 +119,15 @@ public class TeamBotsMod implements ModInitializer {
             return true;
         });
 
+        // Inbox
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            ServerState.load(server).getInbox(handler.player.getUuid()).setPlayer(handler.player);
+        });
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            ServerState.load(server).getInbox(handler.player.getUuid()).setPlayer(null);
+        });
+
+        // Commands
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             BotCommand.register(dispatcher);
             NationCommand.register(dispatcher);
@@ -129,6 +137,7 @@ public class TeamBotsMod implements ModInitializer {
             }));
         });
 
+        // End opening
         ServerTickEvents.END_SERVER_TICK.register((server) -> {
             if (server.getTicks() % 20 != 0) {
                 return;
@@ -137,11 +146,8 @@ public class TeamBotsMod implements ModInitializer {
             if (timeLeft < 0 || timeLeft > 3600) {
                 return;
             }
-            var timeLeftFormatted = String.format("%d:%02d", timeLeft / 60, timeLeft % 60);
             server.getPlayerManager()
                 .broadcast(Text.literal(formatTheEndOpeningTime(false)), true);
         });
-
-
     }
 }

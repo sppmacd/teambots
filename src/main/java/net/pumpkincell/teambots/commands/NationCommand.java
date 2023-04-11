@@ -1,5 +1,6 @@
 package net.pumpkincell.teambots.commands;
 
+import com.mojang.authlib.GameProfileRepository;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -18,6 +19,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.pumpkincell.teambots.ServerState;
 import net.pumpkincell.teambots.TeamBotsMod;
+import net.pumpkincell.teambots.inbox.TextMessage;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +35,8 @@ public class NationCommand {
         final int COMMAND_COOLDOWN = TeamBotsMod.config.getNationCommandCooldownMS();
         if (currentTime < lastRunTime + COMMAND_COOLDOWN) {
             throw new CommandException(Text.literal(String.format("You can use this command next time in %d second(s)",
-                ((lastRunTime + COMMAND_COOLDOWN) - currentTime) / 1000 + 1)));
+                ((lastRunTime + COMMAND_COOLDOWN) - currentTime) / 1000 + 1
+            )));
         }
         lastNationCommandRunTimes.put(player.getUuid(), currentTime);
     }
@@ -48,7 +51,8 @@ public class NationCommand {
         var state = ServerState.load(source.getServer());
         if (state.isLeader(source.getServer(), (Team) Objects.requireNonNull(player.getScoreboardTeam()),
             player.getGameProfile()
-            .getId())) {
+                .getId()
+        )) {
             throw new CommandException(Text.literal("You can't leave nation if you are its leader"));
         }
 
@@ -118,6 +122,7 @@ public class NationCommand {
 
         TeamBotsMod.requireIsNationLeader(source);
 
+        var state = ServerState.load(source.getServer());
         var team = (Team) player.getScoreboardTeam();
         assert team != null;
 
@@ -146,24 +151,20 @@ public class NationCommand {
                 playersToAdd.size()
             )), false);
         }
-        for (var teammate : team.getPlayerList()) {
-            for (var addedPlayer : playersToAdd) {
-                var teammateEntity = source.getServer().getPlayerManager().getPlayer(teammate);
-                var addedPlayerEntity = source.getServer().getPlayerManager().getPlayer(addedPlayer.getId());
-                var addedPlayerName = addedPlayerEntity == null ? Text.literal(addedPlayer.getName()) :
-                    addedPlayerEntity.getDisplayName();
-                if (teammateEntity != null) {
-                    if (playersToAdd.contains(teammateEntity.getGameProfile())) {
-                        teammateEntity.sendMessageToClient(Text.literal(String.format("∙ You have been added to %s.",
-                                team.getName()))
-                            .formatted(Formatting.ITALIC), false);
-                    } else {
-                        teammateEntity.sendMessageToClient(Text.literal("∙ ").formatted(Formatting.ITALIC)
-                            .append(addedPlayerName.copy())
-                            .append(Text.literal(" has joined our nation. Welcome!")
-                                .formatted(Formatting.RESET, Formatting.ITALIC)), false);
+        for (var addedPlayer : playersToAdd) {
+            state.getInbox(addedPlayer.getId())
+                .pushMessage(new TextMessage(Text.literal(String.format("You have been added to %s.", team.getName()))));
+
+            for (var teammate : team.getPlayerList()) {
+                var profile = source.getServer().getUserCache().findByName(teammate);
+                profile.ifPresent((v) -> {
+                    if (profile.get().getId().equals(addedPlayer.getId())) {
+                        return;
                     }
-                }
+                    state.getInbox(profile.get().getId())
+                        .pushMessage(new TextMessage(Text.literal(String.format("%s was added to our nation. " +
+                            "Welcome!", addedPlayer.getName()))));
+                });
             }
         }
         return 0;
@@ -179,6 +180,7 @@ public class NationCommand {
 
         TeamBotsMod.requireIsNationLeader(source);
 
+        var state = ServerState.load(source.getServer());
         var team = (Team) player.getScoreboardTeam();
 
         assert team != null;
@@ -210,17 +212,18 @@ public class NationCommand {
                 var kickedPlayerName = kickedPlayerEntity == null ? Text.literal(kickedPlayer.getName()) :
                     kickedPlayerEntity.getDisplayName();
                 if (teammateEntity != null) {
-                    teammateEntity.sendMessageToClient(Text.literal("∙ ").formatted(Formatting.ITALIC)
-                        .append(kickedPlayerName.copy())
-                        .append(Text.literal(String.format(" has been kicked from our nation. Reason: %s", reason))),
-                        false);
+                    state.getInbox(teammateEntity.getGameProfile().getId())
+                        .pushMessage(new TextMessage(kickedPlayerName.copy()
+                            .append(Text.literal(String.format(" has been kicked from our nation. Reason: %s",
+                                reason
+                            )))));
                 }
             }
-            assert kickedPlayerEntity != null;
-            kickedPlayerEntity.sendMessageToClient(Text.literal(String.format("∙ You have been kicked from %s. " +
-                    "Reason: %s",
-                team.getName(), reason
-            )).formatted(Formatting.ITALIC), false);
+            state.getInbox(kickedPlayer.getId())
+                .pushMessage(new TextMessage(Text.literal(String.format("You have been kicked from %s. " +
+                        "Reason: %s",
+                    team.getName(), reason
+                ))));
         }
         return 0;
     }
@@ -334,7 +337,8 @@ public class NationCommand {
                         .executes((context) -> handleNationKick(context, "Just because"))
                         .then(CommandManager.argument("reason", StringArgumentType.greedyString())
                             .executes((context) -> handleNationKick(context, StringArgumentType.getString(context,
-                                "reason")))
+                                "reason"
+                            )))
                         )
                     )
                 )
