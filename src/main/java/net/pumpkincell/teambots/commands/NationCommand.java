@@ -100,7 +100,7 @@ public class NationCommand {
 
         var team = player.getScoreboard().addTeam(name);
         team.setColor(color);
-        team.setPrefix(Text.literal(String.format("(%s) ", name)));
+        team.setPrefix(Text.literal(String.format("%s: ", name)));
         var state = ServerState.load(source.getServer());
         state.setLeader(team.getName(), player.getGameProfile().getId());
         player.getScoreboard().addPlayerToTeam(player.getEntityName(), team);
