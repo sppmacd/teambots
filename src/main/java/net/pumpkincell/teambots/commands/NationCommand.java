@@ -30,9 +30,9 @@ public class NationCommand {
     private static void handleCooldown(ServerPlayerEntity player) {
         var currentTime = System.currentTimeMillis();
         var lastRunTime = lastNationCommandRunTimes.getOrDefault(player.getUuid(), 0L);
-        final int COMMAND_COOLDOWN = 1000 * 60 * 5; // 5 minutes, in ms
+        final int COMMAND_COOLDOWN = TeamBotsMod.config.getNationCommandCooldownMS();
         if (currentTime < lastRunTime + COMMAND_COOLDOWN) {
-            throw new CommandException(Text.literal(String.format("You can use this command in %d second(s) next time",
+            throw new CommandException(Text.literal(String.format("You can use this command next time in %d second(s)",
                 ((lastRunTime + COMMAND_COOLDOWN) - currentTime) / 1000 + 1)));
         }
         lastNationCommandRunTimes.put(player.getUuid(), currentTime);

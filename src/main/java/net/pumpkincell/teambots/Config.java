@@ -9,6 +9,7 @@ import java.io.FileReader;
 public class Config {
     // if 0, end is always opened
     private long endOpeningTime = 0;
+    private int nationCommandCooldown = 10; // in seconds
 
     public long getTimeLeftToEndOpeningMS() {
         return endOpeningTime * 1000 - System.currentTimeMillis();
@@ -18,5 +19,9 @@ public class Config {
         var configPath = FabricLoader.getInstance().getConfigDir().resolve("teambots.json");
         var gson = new Gson();
         return gson.fromJson(new FileReader(configPath.toString()), Config.class);
+    }
+
+    public int getNationCommandCooldownMS() {
+        return nationCommandCooldown * 1000;
     }
 }
