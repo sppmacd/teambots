@@ -25,8 +25,8 @@ farm AFK-ing.
 For now, only a single bot per nation is allowed. Only players who belong to a nation can use this command, but they do
 not have to be a leader.
 
--   `/bot set <coords>` - Spawn a new bot at `coords` or teleport an existing bot. `coords` must be at most 5 blocks away from you. (TODO: make distance configurable.)
--   `/bot remove` - Remove a bot.
+-   `/bot set <coords>` - spawn a new bot at `coords` or teleport an existing bot. `coords` must be at most 5 blocks away from you. (TODO: make distance configurable.)
+-   `/bot remove` - remove a bot.
 
 ### `/nation` - Nation management
 
@@ -36,12 +36,14 @@ leaders, which can be managed using `/nation admin`.
 
 `/nation` commands (except `list` and `admin`) may have a cooldown configured (see [configuration](#configuration)).
 
--   `/nation invite <player>` - invite new player to a nation (as a leader).
 -   `/nation create <name> <color>` - create a new nation and become its leader
+-   `/nation invite <player>` - invite a new player to a nation (as a leader).
 -   `/nation kick <player>` - kick a player from your nation (as a leader)
 -   `/nation leave` - leave a nation. Possible only if you are not its leader
 -   `/nation list` - display nations and their members.
 -   `/nation remove` - remove your nation (as a leader; you need to kick all the members first)
+-   `/nation set name <name>` - change display name of your nation (as a leader).
+-   `/nation set color <color>` - change color of your nation (as a leader)
 -   `/nation admin` - OP commands for managing nations
     -   `/nation admin setleader <team> <leader>` - set nation leader
     -   `/nation admin clearleader <team>` - remove nation leader, should be done before `/team remove`.

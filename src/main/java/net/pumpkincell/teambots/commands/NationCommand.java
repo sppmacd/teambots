@@ -83,6 +83,10 @@ public class NationCommand {
         return 0;
     }
 
+    private static Text formatPrefix(String name) {
+        return Text.literal(String.format("%s: ", name));
+    }
+
     private static int handleNationCreate(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         var name = StringArgumentType.getString(context, "name");
         var color = ColorArgumentType.getColor(context, "color");
@@ -104,7 +108,7 @@ public class NationCommand {
 
         var team = player.getScoreboard().addTeam(name);
         team.setColor(color);
-        team.setPrefix(Text.literal(String.format("%s: ", name)));
+        team.setPrefix(formatPrefix(name));
         var state = ServerState.load(source.getServer());
         state.setLeader(team.getName(), player.getGameProfile().getId());
         player.getScoreboard().addPlayerToTeam(player.getEntityName(), team);
@@ -250,6 +254,33 @@ public class NationCommand {
         return 0;
     }
 
+    private static int handleNationSetName(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        var name = StringArgumentType.getString(context, "name");
+        var source = context.getSource();
+        var player = source.getPlayer();
+        TeamBotsMod.requireIsNationLeader(source);
+
+        assert player != null;
+        var team = (Team)player.getScoreboardTeam();
+        assert team != null;
+        team.setDisplayName(Text.literal(name));
+        team.setPrefix(formatPrefix(name));
+        return 0;
+    }
+
+    private static int handleNationSetColor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        var color = ColorArgumentType.getColor(context,"color");
+        var source = context.getSource();
+        var player = source.getPlayer();
+        TeamBotsMod.requireIsNationLeader(source);
+
+        assert player != null;
+        var team = (Team)player.getScoreboardTeam();
+        assert team != null;
+        team.setColor(color);
+        return 0;
+    }
+
     private static int handleNationAdminSetLeader(CommandContext<ServerCommandSource> context)
         throws CommandSyntaxException {
         var team = StringArgumentType.getString(context, "team");
@@ -292,10 +323,21 @@ public class NationCommand {
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(CommandManager.literal("nation")
             .requires(ServerCommandSource::isExecutedByPlayer)
-            .then(CommandManager.literal("leave")
-                .executes(NationCommand::handleNationLeave))
-            .then(CommandManager.literal("remove")
-                .executes(NationCommand::handleNationRemove))
+            .then(CommandManager.literal("admin")
+                .requires(source -> source.hasPermissionLevel(3))
+                .then(CommandManager.literal("setleader")
+                    .then(CommandManager.argument("team", TeamArgumentType.team())
+                        .then(CommandManager.argument("leader", GameProfileArgumentType.gameProfile())
+                            .executes(NationCommand::handleNationAdminSetLeader)
+                        )
+                    )
+                )
+                .then(CommandManager.literal("clearleader")
+                    .then(CommandManager.argument("team", TeamArgumentType.team())
+                        .executes(NationCommand::handleNationAdminClearLeader)
+                    )
+                )
+            )
             .then(CommandManager.literal("create")
                 .then(CommandManager.argument("name", StringArgumentType.string())
                     .then(CommandManager.argument("color", ColorArgumentType.color())
@@ -318,19 +360,20 @@ public class NationCommand {
                     )
                 )
             )
+            .then(CommandManager.literal("leave")
+                .executes(NationCommand::handleNationLeave))
             .then(CommandManager.literal("list").executes(NationCommand::handleNationList))
-            .then(CommandManager.literal("admin")
-                .requires(source -> source.hasPermissionLevel(3))
-                .then(CommandManager.literal("setleader")
-                    .then(CommandManager.argument("team", TeamArgumentType.team())
-                        .then(CommandManager.argument("leader", GameProfileArgumentType.gameProfile())
-                            .executes(NationCommand::handleNationAdminSetLeader)
-                        )
+            .then(CommandManager.literal("remove")
+                .executes(NationCommand::handleNationRemove))
+            .then(CommandManager.literal("set")
+                .then(CommandManager.literal("name")
+                    .then(CommandManager.argument("name", StringArgumentType.string())
+                        .executes(NationCommand::handleNationSetName)
                     )
                 )
-                .then(CommandManager.literal("clearleader")
-                    .then(CommandManager.argument("team", TeamArgumentType.team())
-                        .executes(NationCommand::handleNationAdminClearLeader)
+                .then(CommandManager.literal("color")
+                    .then(CommandManager.argument("color", ColorArgumentType.color())
+                        .executes(NationCommand::handleNationSetColor)
                     )
                 )
             )

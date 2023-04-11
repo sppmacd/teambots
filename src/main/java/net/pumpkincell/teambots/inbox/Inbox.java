@@ -18,8 +18,6 @@ import java.util.Map;
 
 /// Class for managing messages sent to an offline player.
 public class Inbox {
-    private static final Logger LOGGER = TeamBotsMod.LOGGER;
-
     private final List<Message> storedMessages = new LinkedList<>();
     private final Map<Long, Message> messagesWithPendingAction = new HashMap<>();
     private long lastId = 0;
@@ -63,8 +61,6 @@ public class Inbox {
     }
 
     public void pushMessage(Message message) {
-        LOGGER.info("{}", message);
-
         if (message.id == 0) {
             message.id = ++this.lastId;
         }

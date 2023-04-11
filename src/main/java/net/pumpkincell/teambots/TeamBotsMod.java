@@ -109,7 +109,7 @@ public class TeamBotsMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        SharedConstants.isDevelopment = true;
+//        SharedConstants.isDevelopment = true;
 
         // Bots
         ServerLivingEntityEvents.ALLOW_DEATH.register((entity, damageSource, damageAmount) -> {
