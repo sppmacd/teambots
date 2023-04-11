@@ -1,28 +1,30 @@
 package net.pumpkincell.teambots;
 
 import carpet.patches.EntityPlayerMPFake;
+import com.ibm.icu.impl.duration.DurationFormatter;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.SharedConstants;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.Team;
+import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
 import net.pumpkincell.teambots.commands.BotCommand;
 import net.pumpkincell.teambots.commands.NationCommand;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.event.ItemEvent;
 import java.io.FileNotFoundException;
+import java.text.DateFormat;
+import java.time.Duration;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -35,9 +37,12 @@ public class TeamBotsMod implements ModInitializer {
     // FIXME: This should belong to Server or to World.
     public static final Map<AbstractTeam, EntityPlayerMPFake> botsForTeam = new HashMap<>();
 
-    public static final SimpleCommandExceptionType NOT_IN_NATION = new SimpleCommandExceptionType(Text.literal("You need to be in a nation to run this command"));
-    public static final SimpleCommandExceptionType NOT_NATION_LEADER = new SimpleCommandExceptionType(Text.literal("You need to be a nation's leader to run this command"));
-    public static final SimpleCommandExceptionType ALREADY_IN_NATION = new SimpleCommandExceptionType(Text.literal("You are already in a nation"));
+    public static final SimpleCommandExceptionType NOT_IN_NATION = new SimpleCommandExceptionType(Text.literal("You " +
+        "need to be in a nation to run this command"));
+    public static final SimpleCommandExceptionType NOT_NATION_LEADER = new SimpleCommandExceptionType(Text.literal(
+        "You need to be a nation's leader to run this command"));
+    public static final SimpleCommandExceptionType ALREADY_IN_NATION = new SimpleCommandExceptionType(Text.literal(
+        "You are already in a nation"));
 
     public static Config config;
 
@@ -85,6 +90,19 @@ public class TeamBotsMod implements ModInitializer {
         }
     }
 
+    private String formatTheEndOpeningTime(boolean longFormat) {
+        var timeLeft = config.getTimeLeftToEndOpeningMS();
+        if (timeLeft <= 0) {
+            return "The End is already opened";
+        }
+        if (longFormat) {
+            DateFormat df = DateFormat.getDateInstance(DateFormat.LONG, Locale.getDefault());
+            String formattedDate = df.format(config.getEndOpeningTimeMS());
+            return String.format("The End is opening %s, in %s", formattedDate, DurationFormatUtils.formatDurationWords(timeLeft, true, true));
+        }
+        return String.format("The End is opening in %s", DurationFormatUtils.formatDurationHMS(timeLeft));
+    }
+
     @Override
     public void onInitialize() {
         SharedConstants.isDevelopment = true;
@@ -105,6 +123,10 @@ public class TeamBotsMod implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             BotCommand.register(dispatcher);
             NationCommand.register(dispatcher);
+            dispatcher.register(CommandManager.literal("endopening").executes((ctx) -> {
+                ctx.getSource().sendFeedback(Text.literal(formatTheEndOpeningTime(true)), false);
+                return 0;
+            }));
         });
 
         ServerTickEvents.END_SERVER_TICK.register((server) -> {
@@ -116,7 +138,8 @@ public class TeamBotsMod implements ModInitializer {
                 return;
             }
             var timeLeftFormatted = String.format("%d:%02d", timeLeft / 60, timeLeft % 60);
-            server.getPlayerManager().broadcast(Text.literal(String.format("The End opens in %s", timeLeftFormatted)), true);
+            server.getPlayerManager()
+                .broadcast(Text.literal(formatTheEndOpeningTime(false)), true);
         });
 
 

@@ -24,4 +24,8 @@ public class Config {
     public int getNationCommandCooldownMS() {
         return nationCommandCooldown * 1000;
     }
+
+    public long getEndOpeningTimeMS() {
+        return endOpeningTime * 1000;
+    }
 }
