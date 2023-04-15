@@ -13,10 +13,6 @@ This is currently tested only on Minecraft 1.19.2.
 
 ## Commands
 
-### `/endopening`
-
-Check when The End will be opened.
-
 ### `/bot` - Carpet bot management
 
 This command can be used to spawn and kill Carpet bots. They behave like normal players, so can be used for things like
@@ -27,6 +23,10 @@ not have to be a leader.
 
 -   `/bot set <coords>` - spawn a new bot at `coords` or teleport an existing bot. `coords` must be at most 5 blocks away from you. (TODO: make distance configurable.)
 -   `/bot remove` - remove a bot.
+
+### `/endopening`
+
+Check when The End will be opened.
 
 ### `/nation` - Nation management
 
@@ -47,6 +47,10 @@ leaders, which can be managed using `/nation admin`.
 -   `/nation admin` - OP commands for managing nations
     -   `/nation admin setleader <team> <leader>` - set nation leader
     -   `/nation admin clearleader <team>` - remove nation leader, should be done before `/team remove`.
+
+### `/worldsize` - Check current world size
+
+This command displays current world size. If it is moving, displays the target size and time left.
 
 ## Configuration
 

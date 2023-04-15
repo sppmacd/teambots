@@ -139,6 +139,17 @@ public class TeamBotsMod implements ModInitializer {
                 ctx.getSource().sendFeedback(Text.literal(formatTheEndOpeningTime(true)), false);
                 return 0;
             }));
+            dispatcher.register(CommandManager.literal("worldsize").executes((ctx) -> {
+                var src = ctx.getSource();
+                var border = src.getWorld().getWorldBorder();
+                var string = String.format("The world size is %f blocks", src.getWorld().getWorldBorder().getSize());
+                if (border.getSizeLerpTime() > 0) {
+                    string += String.format(" (changing to %f in %s)", border.getSizeLerpTarget(),
+                        DurationFormatUtils.formatDurationWords(border.getSizeLerpTime(), true, true));
+                }
+                src.sendFeedback(Text.literal(string), false);
+                return 0;
+            }));
             dispatcher.register(CommandManager.literal("~inbox")
                 .then(CommandManager.literal("clickevent")
                     .then(CommandManager.argument("msgid", LongArgumentType.longArg())
