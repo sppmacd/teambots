@@ -43,7 +43,7 @@ public class BotCommand {
         var team = (Team) player.getScoreboardTeam();
 
         var bot = TeamBotsMod.botsForTeam.get(team);
-        if (bot == null) {
+        if (bot == null || !bot.isAlive()) {
             assert team != null;
             var newBot =
                 EntityPlayerMPFake.createFake("bot_" + Integer.toHexString((team.getName() + System.currentTimeMillis()).hashCode()), player.server, coords.getX(), coords.getY(), coords.getZ(), 0, 0, player.getWorld()
