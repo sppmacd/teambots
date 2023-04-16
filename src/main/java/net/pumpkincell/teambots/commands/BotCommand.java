@@ -50,7 +50,7 @@ public class BotCommand {
                     .getRegistryKey(), GameMode.SURVIVAL, false);
             TeamBotsMod.botsForTeam.put(team, newBot);
         } else {
-            bot.setPos(coords.getX(), coords.getY(), coords.getZ());
+            bot.teleport(player.getWorld(), coords.getX(), coords.getY(), coords.getZ(), 0, 0);
         }
         return 0;
     }
