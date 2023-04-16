@@ -16,6 +16,7 @@ import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.pumpkincell.teambots.commands.BotCommand;
 import net.pumpkincell.teambots.commands.NationCommand;
@@ -112,14 +113,14 @@ public class TeamBotsMod implements ModInitializer {
 //        SharedConstants.isDevelopment = true;
 
         // Bots
-        ServerLivingEntityEvents.ALLOW_DEATH.register((entity, damageSource, damageAmount) -> {
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
             if (entity instanceof EntityPlayerMPFake) {
                 if (botsForTeam.containsValue(entity)) {
                     LOGGER.info("Bot {} was killed, removing", entity.getEntityName());
                     botsForTeam.values().remove(entity);
+                    ((ServerPlayerEntity)entity).networkHandler.disconnect(Text.literal("Not being wanted on this world"));
                 }
             }
-            return true;
         });
 
         // Inbox
